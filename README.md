@@ -6,13 +6,13 @@ This package provides an implementation to integrate Swarm's Access Control Trie
 
 ## Background
 
-The Access Control Trie (ACT) in Swarm provides a way to manage access permissions for resources stored on the Swarm network. However, the native implementation of ACT is node-based, meaning access control is managed at the node level rather than the user level. This poses a challenge for applications like **fairOS-dfs**, which are user-centric and require fine-grained access control among users.
+The Access Control Trie (ACT) in Swarm provides a way to manage access permissions for resources stored on the Swarm network. However, the native implementation of ACT is node-based, meaning access control is managed at the node level rather than the user level. This poses a challenge for user-centric and fine-grained access control.
 
 ### Problem with Native Swarm ACT
 
 - **Node-Based Access Control**: Swarm's native ACT operates on nodes, not users, limiting the ability to control access at a user level.
 - **Lack of User Concept**: Without user keys, it's challenging to implement user-specific permissions and sharing capabilities.
-- **Limited Collaboration**: Users cannot be added as grantees directly, hindering collaborative functionalities in **fairOS-dfs**.
+- **Limited Collaboration**: Users cannot be added as grantees directly.
 
 ## Solution
 
