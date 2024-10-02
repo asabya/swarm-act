@@ -1,4 +1,4 @@
-# Swarm ACT Integration for User-Based Access Control in fairOS-dfs
+# Swarm ACT Integration for User-Based Access Control
 
 ## Overview
 
