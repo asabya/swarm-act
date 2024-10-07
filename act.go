@@ -7,9 +7,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	blockstore "github.com/asabya/swarm-blockstore"
 
-	"github.com/asabya/swarm-act/pkg/blockstore"
-	"github.com/asabya/swarm-act/pkg/blockstore/putergetter"
+	"github.com/asabya/swarm-blockstore/putergetter"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/ethersphere/bee/v2/pkg/accesscontrol"
 	"github.com/ethersphere/bee/v2/pkg/api"
