@@ -7,8 +7,8 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	blockstore "github.com/asabya/swarm-blockstore"
 
+	blockstore "github.com/asabya/swarm-blockstore"
 	"github.com/asabya/swarm-blockstore/putergetter"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/ethersphere/bee/v2/pkg/accesscontrol"
@@ -48,11 +48,7 @@ func New(bee blockstore.Client, key *ecdsa.PrivateKey, stamp string) *ACT {
 
 // CreateGrantee adds new grantees to the access control list.
 // It creates a new encrypted grantee list and updates the history reference.
-func (a *ACT) CreateGrantee(ctx context.Context, historyAddress swarm.Address, granteeList []string) (*api.GranteesPostResponse, error) {
-	list, err := parseKeys(granteeList)
-	if err != nil {
-		return nil, err
-	}
+func (a *ACT) CreateGrantee(ctx context.Context, historyAddress swarm.Address, list []*ecdsa.PublicKey) (*api.GranteesPostResponse, error) {
 	ls := loadsave.New(a.pg, a.pg, func() pipeline.Interface {
 		return builder.NewPipelineBuilder(ctx, a.pg, false, redundancy.NONE)
 	})
@@ -70,30 +66,17 @@ func (a *ACT) CreateGrantee(ctx context.Context, historyAddress swarm.Address, g
 }
 
 // GetGrantees retrieves the list of current grantees from the access control list.
-func (a *ACT) GetGrantees(ctx context.Context, granteesAddress swarm.Address) ([]string, error) {
+func (a *ACT) GetGrantees(ctx context.Context, granteesAddress swarm.Address) ([]*ecdsa.PublicKey, error) {
 	ls := loadsave.NewReadonly(a.pg)
 	grantees, err := a.controller.Get(ctx, ls, a.publicKey, granteesAddress)
 	if err != nil {
 		return nil, err
 	}
-	granteeSlice := make([]string, len(grantees))
-	for i, grantee := range grantees {
-		granteeSlice[i] = hex.EncodeToString(crypto.EncodeSecp256k1PublicKey(grantee))
-	}
-	return granteeSlice, nil
+	return grantees, nil
 }
 
 // RevokeGrant updates the access control list by adding new grantees and revoking specified grantees.
-func (a *ACT) RevokeGrant(ctx context.Context, granteesAddress, historyAddress swarm.Address, granteeList, revokeList []string) (*api.GranteesPostResponse, error) {
-	addList, err := parseKeys(granteeList)
-	if err != nil {
-		return nil, err
-	}
-
-	removeList, err := parseKeys(revokeList)
-	if err != nil {
-		return nil, err
-	}
+func (a *ACT) RevokeGrant(ctx context.Context, granteesAddress, historyAddress swarm.Address, addList, removeList []*ecdsa.PublicKey) (*api.GranteesPostResponse, error) {
 
 	ls := loadsave.New(a.pg, a.pg, func() pipeline.Interface {
 		return builder.NewPipelineBuilder(ctx, a.pg, false, redundancy.NONE)
@@ -129,9 +112,9 @@ func (a *ACT) HandleUpload(ctx context.Context, reference, historyAddress swarm.
 
 // HandleDownload processes the download operation with access control.
 // It checks the user's permissions and returns the address of the data if access is granted.
-func (a *ACT) HandleDownload(ctx context.Context, reference, historyAddress swarm.Address, ts int64) (swarm.Address, error) {
+func (a *ACT) HandleDownload(ctx context.Context, reference, historyAddress swarm.Address, publisher *ecdsa.PublicKey, ts int64) (swarm.Address, error) {
 	ls := loadsave.NewReadonly(a.pg)
-	return a.controller.DownloadHandler(ctx, ls, reference, a.publicKey, historyAddress, ts)
+	return a.controller.DownloadHandler(ctx, ls, reference, publisher, historyAddress, ts)
 }
 
 func parseKeys(list []string) ([]*ecdsa.PublicKey, error) {

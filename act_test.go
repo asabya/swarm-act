@@ -53,9 +53,7 @@ func TestController_UpdateHandler(t *testing.T) {
 	_, _ = href, grantee1
 	t.Run("add to new list", func(t *testing.T) {
 		addList := []*ecdsa.PublicKey{&grantee.PublicKey}
-		encodedAddList, err := encodeKeys(addList)
-		require.NoError(t, err)
-		resp, err := a.CreateGrantee(ctx, swarm.ZeroAddress, encodedAddList)
+		resp, err := a.CreateGrantee(ctx, swarm.ZeroAddress, addList)
 		require.NoError(t, err)
 
 		gl, err := a.GetGrantees(ctx, resp.Reference)
@@ -66,9 +64,7 @@ func TestController_UpdateHandler(t *testing.T) {
 	})
 	t.Run("add to existing list", func(t *testing.T) {
 		addList := []*ecdsa.PublicKey{&grantee.PublicKey}
-		encodedAddList, err := encodeKeys(addList)
-		require.NoError(t, err)
-		resp, err := a.CreateGrantee(ctx, swarm.ZeroAddress, encodedAddList)
+		resp, err := a.CreateGrantee(ctx, swarm.ZeroAddress, addList)
 		require.NoError(t, err)
 
 		gl, err := a.GetGrantees(ctx, resp.Reference)
@@ -78,9 +74,7 @@ func TestController_UpdateHandler(t *testing.T) {
 		assert.Len(t, gl, 1)
 
 		addList = []*ecdsa.PublicKey{&getPrivKey(0).PublicKey}
-		encodedAddList, err = encodeKeys(addList)
-		require.NoError(t, err)
-		resp, err = a.RevokeGrant(ctx, resp.Reference, href, encodedAddList, nil)
+		resp, err = a.RevokeGrant(ctx, resp.Reference, href, addList, nil)
 		assertNoError(t, "UpdateHandler", err)
 		gl, err = a.GetGrantees(ctx, resp.Reference)
 		assertNoError(t, "create granteelist ref", err)
@@ -88,29 +82,21 @@ func TestController_UpdateHandler(t *testing.T) {
 	})
 	t.Run("add and revoke", func(t *testing.T) {
 		addList := []*ecdsa.PublicKey{&grantee.PublicKey, &grantee1.PublicKey}
-		encodedAddList, err := encodeKeys(addList)
-		require.NoError(t, err)
-		resp, err := a.CreateGrantee(ctx, swarm.ZeroAddress, encodedAddList)
+		resp, err := a.CreateGrantee(ctx, swarm.ZeroAddress, addList)
 		require.NoError(t, err)
 
 		removeList := []*ecdsa.PublicKey{&grantee1.PublicKey}
-		encodedRemoveList, err := encodeKeys(removeList)
-		require.NoError(t, err)
-		resp, err = a.RevokeGrant(ctx, resp.Reference, href, nil, encodedRemoveList)
+		resp, err = a.RevokeGrant(ctx, resp.Reference, href, nil, removeList)
 		require.NoError(t, err)
 
 		gl, err := a.GetGrantees(ctx, resp.Reference)
 		assertNoError(t, "granteelist ref", err)
 		assert.Len(t, gl, 1)
 
-		grantees, err := encodeKeys([]*ecdsa.PublicKey{&grantee.PublicKey})
-		assertNoError(t, "granteelist ref", err)
-		assert.Equal(t, gl, grantees)
+		assert.Equal(t, gl, []*ecdsa.PublicKey{&grantee.PublicKey})
 	})
 	t.Run("add and revoke then get from history", func(t *testing.T) {
 		addRevokeList := []*ecdsa.PublicKey{&grantee.PublicKey}
-		encodedAddRevokeList, err := encodeKeys(addRevokeList)
-		assertNoError(t, "granteelist ref", err)
 		ref := swarm.RandAddress(t)
 		res, err := a.HandleUpload(ctx, ref, swarm.ZeroAddress)
 		require.NoError(t, err)
@@ -118,11 +104,11 @@ func TestController_UpdateHandler(t *testing.T) {
 		// Need to wait a second before each update call so that a new history mantaray fork is created for the new key(timestamp) entry
 		time.Sleep(1 * time.Second)
 		beforeRevokeTS := time.Now().Unix()
-		res1, err := a.CreateGrantee(ctx, res.HistoryReference, encodedAddRevokeList)
+		res1, err := a.CreateGrantee(ctx, res.HistoryReference, addRevokeList)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Second)
-		res2, err := a.RevokeGrant(ctx, res1.Reference, res1.HistoryReference, nil, encodedAddRevokeList)
+		res2, err := a.RevokeGrant(ctx, res1.Reference, res1.HistoryReference, nil, addRevokeList)
 		require.NoError(t, err)
 
 		//gl, err := accesscontrol.NewGranteeListReference(ctx, ls, res2.Reference)
@@ -145,9 +131,41 @@ func TestController_UpdateHandler(t *testing.T) {
 		assert.Equal(t, swarm.ZeroAddress, decRef)
 
 		// publisher shall still be able to download with the timestamp before the revoke
-		decRef, err = a.HandleDownload(ctx, res.Reference, res2.HistoryReference, beforeRevokeTS)
+		decRef, err = a.HandleDownload(ctx, res.Reference, res2.HistoryReference, &publisher.PublicKey, beforeRevokeTS)
 		require.NoError(t, err)
 		assert.Equal(t, ref, decRef)
+	})
+
+	t.Run("create then upload then get from history", func(t *testing.T) {
+		addRevokeList := []*ecdsa.PublicKey{&grantee.PublicKey}
+
+		res1, err := a.CreateGrantee(ctx, swarm.ZeroAddress, addRevokeList)
+		require.NoError(t, err)
+		// Need to wait a second before each update call so that a new history mantaray fork is created for the new key(timestamp) entry
+		time.Sleep(1 * time.Second)
+		//ref := swarm.RandAddress(t)
+		//res, err := a.HandleUpload(ctx, ref, res1.HistoryReference)
+		//require.NoError(t, err)
+		//
+		//time.Sleep(1 * time.Second)
+		//b := New(beeApi, grantee, mock.BatchOkStr)
+		//decRef, err := b.HandleDownload(ctx, res.Reference, res.HistoryReference, &publisher.PublicKey, time.Now().Unix())
+		//require.NoError(t, err)
+		//assert.Equal(t, ref, decRef)
+		kkeys, err := a.GetGrantees(ctx, res1.Reference)
+		require.NoError(t, err)
+		fmt.Println(kkeys)
+		resp2, err := a.RevokeGrant(ctx, res1.Reference, res1.HistoryReference, nil, addRevokeList)
+		require.NoError(t, err)
+		time.Sleep(1 * time.Second)
+
+		kkeys, err = a.GetGrantees(ctx, resp2.Reference)
+		require.NoError(t, err)
+		fmt.Println(kkeys)
+		// download with grantee shall NOT work with the latest timestamp
+		//decRef, err = b.HandleDownload(ctx, res.Reference, resp2.HistoryReference, &publisher.PublicKey, time.Now().Unix())
+		//require.Error(t, err)
+		//assert.Equal(t, swarm.ZeroAddress, decRef)
 	})
 	//t.Run("add twice", func(t *testing.T) {
 	//	addList := []*ecdsa.PublicKey{&grantee.PublicKey, &grantee.PublicKey}
