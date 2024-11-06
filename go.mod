@@ -3,7 +3,7 @@ module github.com/asabya/swarm-act
 go 1.22.0
 
 require (
-	github.com/asabya/swarm-blockstore v0.0.0-20241022084926-8d6753f32697
+	github.com/asabya/swarm-blockstore v0.0.0-20241106102400-00f682459f25
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/ethersphere/bee/v2 v2.2.0
 	github.com/stretchr/testify v1.9.0

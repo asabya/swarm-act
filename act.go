@@ -12,7 +12,6 @@ import (
 	"github.com/asabya/swarm-blockstore/putergetter"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/ethersphere/bee/v2/pkg/accesscontrol"
-	"github.com/ethersphere/bee/v2/pkg/api"
 	"github.com/ethersphere/bee/v2/pkg/crypto"
 	"github.com/ethersphere/bee/v2/pkg/file/loadsave"
 	"github.com/ethersphere/bee/v2/pkg/file/pipeline"
@@ -27,6 +26,13 @@ type ACT struct {
 	publicKey  *ecdsa.PublicKey
 	controller *accesscontrol.ControllerStruct
 	pg         *putergetter.PutGetter
+}
+
+type GranteesPostResponse struct {
+	// Reference represents the saved grantee list Swarm address.
+	Reference swarm.Address `json:"ref"`
+	// HistoryReference represents the reference to the history of an access control entry.
+	HistoryReference swarm.Address `json:"historyref"`
 }
 
 // New initializes a new ACT instance with the given user's private key, Bee client, and postage stamp ID.
@@ -48,7 +54,7 @@ func New(bee blockstore.Client, key *ecdsa.PrivateKey, stamp string) *ACT {
 
 // CreateGrantee adds new grantees to the access control list.
 // It creates a new encrypted grantee list and updates the history reference.
-func (a *ACT) CreateGrantee(ctx context.Context, historyAddress swarm.Address, list []*ecdsa.PublicKey) (*api.GranteesPostResponse, error) {
+func (a *ACT) CreateGrantee(ctx context.Context, historyAddress swarm.Address, list []*ecdsa.PublicKey) (*GranteesPostResponse, error) {
 	ls := loadsave.New(a.pg, a.pg, func() pipeline.Interface {
 		return builder.NewPipelineBuilder(ctx, a.pg, false, redundancy.NONE)
 	})
@@ -59,7 +65,7 @@ func (a *ACT) CreateGrantee(ctx context.Context, historyAddress swarm.Address, l
 	if err != nil {
 		return nil, err
 	}
-	return &api.GranteesPostResponse{
+	return &GranteesPostResponse{
 		Reference:        encryptedglref,
 		HistoryReference: historyref,
 	}, nil
@@ -76,7 +82,7 @@ func (a *ACT) GetGrantees(ctx context.Context, granteesAddress swarm.Address) ([
 }
 
 // RevokeGrant updates the access control list by adding new grantees and revoking specified grantees.
-func (a *ACT) RevokeGrant(ctx context.Context, granteesAddress, historyAddress swarm.Address, addList, removeList []*ecdsa.PublicKey) (*api.GranteesPostResponse, error) {
+func (a *ACT) RevokeGrant(ctx context.Context, granteesAddress, historyAddress swarm.Address, addList, removeList []*ecdsa.PublicKey) (*GranteesPostResponse, error) {
 
 	ls := loadsave.New(a.pg, a.pg, func() pipeline.Interface {
 		return builder.NewPipelineBuilder(ctx, a.pg, false, redundancy.NONE)
@@ -88,7 +94,7 @@ func (a *ACT) RevokeGrant(ctx context.Context, granteesAddress, historyAddress s
 	if err != nil {
 		return nil, err
 	}
-	return &api.GranteesPostResponse{
+	return &GranteesPostResponse{
 		Reference:        encryptedglref,
 		HistoryReference: historyref,
 	}, nil
@@ -96,7 +102,7 @@ func (a *ACT) RevokeGrant(ctx context.Context, granteesAddress, historyAddress s
 
 // HandleUpload processes the upload operation with access control.
 // It updates the references to the data and history feed.
-func (a *ACT) HandleUpload(ctx context.Context, reference, historyAddress swarm.Address) (*api.GranteesPostResponse, error) {
+func (a *ACT) HandleUpload(ctx context.Context, reference, historyAddress swarm.Address) (*GranteesPostResponse, error) {
 	ls := loadsave.New(a.pg, a.pg, func() pipeline.Interface {
 		return builder.NewPipelineBuilder(ctx, a.pg, false, redundancy.NONE)
 	})
@@ -104,7 +110,7 @@ func (a *ACT) HandleUpload(ctx context.Context, reference, historyAddress swarm.
 	if err != nil {
 		return nil, err
 	}
-	return &api.GranteesPostResponse{
+	return &GranteesPostResponse{
 		Reference:        ref,
 		HistoryReference: href,
 	}, nil
